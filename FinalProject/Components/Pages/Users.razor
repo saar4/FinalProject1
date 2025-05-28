@@ -1,0 +1,217 @@
+﻿@page "/users"
+@using FinalProject.Models
+@using FinalProject.Services
+@rendermode InteractiveServer
+@inject UserService MyUserService
+
+<h1>User Management</h1>
+
+<!-- Add User Section -->
+<h3>Add User</h3>
+<div class="mb-3">
+    <label for="name" class="form-label">Name</label>
+    <input id="name" class="form-control mb-2" @bind="newUser.Name" placeholder="Name" />
+</div>
+
+<div class="mb-3">
+    <label for="age" class="form-label">Age</label>
+    <input id="age" class="form-control mb-2" @bind="newUser.Age" placeholder="Age" />
+</div>
+
+<div class="mb-3">
+    <label for="username" class="form-label">Username</label>
+    <input id="username" class="form-control mb-2" @bind="newUser.Username" placeholder="Username" />
+</div>
+
+<div class="mb-3">
+    <label for="password" class="form-label">Password</label>
+    <input id="password" type="password" class="form-control mb-2" @bind="newUser.Password" placeholder="Password" />
+</div>
+
+<div class="mb-3">
+    <label for="role" class="form-label">Role</label>
+    <select id="role" class="form-control mb-2" @bind="newUser.Role">
+        <option value="user">User</option>
+        <option value="admin">Admin</option>
+    </select>
+</div>
+
+<button class="btn btn-primary" @onclick="AddUser">Add User</button>
+
+//טבלת המשתמשים
+@if (users == null)
+{
+    <h1><em>Loading...</em></h1>
+}
+else
+{
+    <h3>Users List</h3>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+                <th>Age</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (User user in users)
+            {
+                <tr>
+                    <td>@user.Id</td>
+                    <td>@user.Name</td>
+                    <td>@user.Age</td>
+                    <td>@user.Username</td>
+                    <td>@user.Role</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => EditUser(user)">Edit</button>
+                        <button class="btn btn-danger" @onclick="() => DeleteUser(user.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+// אזור עריכת משתמש
+@if (editUser != null)
+{
+    <h3>Update User</h3>
+    <div class="mb-3">
+        <label for="editName" class="form-label">Name</label>
+        <input id="editName" class="form-control mb-2" @bind="newUser.Name" placeholder="Name" />
+    </div>
+
+    <div class="mb-3">
+        <label for="editAge" class="form-label">Age</label>
+        <input id="editAge" class="form-control mb-2" @bind="newUser.Age" placeholder="Age" />
+    </div>
+
+    <div class="mb-3">
+        <label for="editUsername" class="form-label">Username</label>
+        <input id="editUsername" class="form-control mb-2" @bind="newUser.Username" placeholder="Username" />
+    </div>
+
+    <div class="mb-3">
+        <label for="editPassword" class="form-label">Password</label>
+        <input id="editPassword" type="password" class="form-control mb-2" @bind="newUser.Password" placeholder="Password" />
+    </div>
+
+    <div class="mb-3">
+        <label for="editRole" class="form-label">Role</label>
+        <select id="editRole" class="form-control mb-2" @bind="newUser.Role">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+        </select>
+    </div>
+
+    <button class="btn btn-warning" @onclick="UpdateUser">Update</button>
+
+    @if (updatePasswordWarning != null)
+    {
+        <div class="container alert alert-warning mt-4">
+            @updatePasswordWarning
+        </div>
+    }
+}
+
+@code {
+    private List<User>? users;
+    private User newUser = new User();
+    private User? editUser;
+    private String? updatePasswordWarning;
+    private String? addUserWarning;
+
+    // העלאת המשתמשים בעת כניסה לעמוד
+    protected override void OnInitialized()
+    {
+        LoadUsers();
+    }
+
+    private void LoadUsers()
+    {
+        users = MyUserService.GetAllUsers();  // קריאה לשירות היוזרים בבקשה להציג את המשתמשים
+    }
+
+    private void AddUser()
+    //שימו לב, נוסף לפונקציה מנגנון שתופס טעויות קריטיות - כמו אי הזנת סיסמה - ומונע קריסה של האתר
+    {
+        try
+        {
+            if (newUser.Password == "")
+            {
+                throw new InvalidCastException("You Must Enter Your Password");
+            }
+            // מזינים סיסמה חדשה
+            newUser.Password = newUser.Password;
+
+            // פנייה לשירות היוזרים בשביל הוספת המשתמש לבסיס הנתונים
+            MyUserService.AddUser(newUser);
+
+            // ניקוי הטופס
+            newUser = new User();
+            LoadUsers();  // העלאת רשימת המשתמשים מחדש
+        }
+        catch (Exception ex)
+        {
+            addUserWarning = $"Warning: {ex.Message}";
+        }
+    }
+
+    private void DeleteUser(int userId)
+    {
+        // קריאה לשירות היוזרים בשביל מחיקת המשתמש בבסיס הנתונים
+        MyUserService.DeleteUser(userId);
+        LoadUsers();  // העלאת רשימת המשתמשים מחדש
+    }
+
+    private void EditUser(User user)
+    {
+        // כשאנחנו נכנסים לפונקצית עריכת המשתמש אנחנו קודם כל ממלאים את טופס העריכה בפרטי המשתמש
+        editUser = user;
+        newUser.Name = user.Name;
+        newUser.Age = user.Age;
+        newUser.Username = user.Username;
+        newUser.Role = user.Role;
+    }
+
+    //לפונקצית העדכון אנחנו נכנסים רק כאשר נלחץ כפתור העדכון
+    //בפונקציה הזו יש שימוש במנגנון סינון טעויות קריטיות שמונע מהאתר לקרוס
+    private void UpdateUser()
+    {
+        try
+        {
+            if (editUser != null)
+            {
+                if (newUser.Password == "")
+                {
+                    throw new InvalidCastException("You Must Enter Your Password");
+                }
+                // אנחנו מעדכנים את המשתמש הנוכחי בפרטי המידע החדש שמגיע אלינו מטופס העדכון
+                editUser.Name = newUser.Name;
+                editUser.Age = newUser.Age;
+                editUser.Username = newUser.Username;
+                editUser.Password = newUser.Password;
+                editUser.Role = newUser.Role;
+
+                // אנחנו קוראים לפונקצית העדכון משירות המשתמשים שלנו. זו שמדברת עם בסיס הנתונים
+                MyUserService.UpdateUser(editUser);
+
+                // מאפסים את טופס העדכון ואת יוזר הביניים שיצרנו
+                editUser = null;
+                newUser = new User();
+                LoadUsers();  // העלה מחדש את רשימת היוזרים
+            }
+        }
+        // אם מזוהה שגיאה קריטית אנחנו תופסים אותו ומפרסמים את הודעת השגיאה על המסך
+        catch (Exception ex)
+        {
+            updatePasswordWarning = $"Warning: {ex.Message}";
+        }
+    }
+}
+
+    
